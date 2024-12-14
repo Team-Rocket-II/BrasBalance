@@ -1,3 +1,11 @@
+//**********************************************************
+// fichier uarm_swift_pro.c
+//
+// Programme qui gère les commandes envoyées au bras
+//
+// @author Malbrouck Harold Jonathan
+// @date   2024-11-28
+// **********************************************************
 
 #include "uarm_swift_pro.h"
 
@@ -10,6 +18,8 @@
 #define NOGRAB 0
 #define TRIGGERED 1
 #define NOTRIGGERED 0
+
+
 // Fonction pour initialiser le port série
 int init_serial(const char *port_name, int baud_rate) {
     int serial_port = open(port_name, O_RDWR | O_NOCTTY);
@@ -75,7 +85,7 @@ char* read_response(int serial_port) {
 // Fonction pour vérifier l'état du limiteur
 int limit_switch(int serial_port) {
     // Envoyer la commande au besoin (décommenter si nécessaire)
-     send_gcode(serial_port, "P2233");
+     //send_gcode(serial_port, "P2233");
 
     // Lire la réponse
     char* triggered = read_response(serial_port);
@@ -85,8 +95,8 @@ int limit_switch(int serial_port) {
         int v_triggered; // Variable pour capturer la valeur numérique de "V"
 
         // Analyser la réponse pour vérifier si elle correspond au format attendu
-        //if (sscanf(triggered, "@6 N0 V%d", &v_triggered) == 1 && v_triggered == TRIGGERED) {
-        if (sscanf(triggered, "ok V%d", &v_triggered) == 1 && v_triggered == TRIGGERED) {
+        //if (sscanf(triggered, "@6 N0 V%d", &v_triggered) == 1 && v_triggered == TRIGGERED) { // à décommenter si le firmware du bras à jour
+        if (sscanf(triggered, "ok V%d", &v_triggered) == 1 && v_triggered == TRIGGERED) { // à commenter au besoin
             printf("Objet en contact !!!\n");
             free(triggered); // Libérer la mémoire
             return TRIGGERED;
@@ -153,25 +163,6 @@ int grab_object(int serial_port) {
     return NOGRAB;
 }
 
-
-
-//int grab_object(int serial_port){
-
-//	send_gcode(serial_port, "#25 P2231");
-//	char* grabbing = read_response(serial_port);
-//	char v_grabbing;
-
-//	if(grabbing !=NULL){
-//	   if(sscanf(grabbing, "$25 ok V%d",&v_grabbing) == GRAB){
-//	        printf("la pump a attrappé de quoi !!!\n");
-//		return GRAB;
-//	   }
-//	}
-
-//	return NOGRAB;
-
-//}
-
 void delay(int serial_port,int idelay){
      
     char commandelay[6];
@@ -218,12 +209,14 @@ int arm_still_moving(int serial_port){
    return -1;
 }
 
+// Fonction pour mettre en marche la pompe à vaccum
 void pump_on(int serial_port)
 { 
 	send_gcode(serial_port,"#25 M2231 V1");
 	usleep(2000000);
 }
 
+// Fonction pour arréter la pompe
 void pump_off(int serial_port)
 { 
 	send_gcode(serial_port,"#25 M2231 V0");

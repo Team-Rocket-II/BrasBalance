@@ -134,7 +134,7 @@ void _main(void)
 }
 
 //*********************************************************************
-void LirePoids(void)
+int LirePoids(void)
 //*********************************************************************
 // Fonction qui permet de lire et récupérer le poids sur une balance 
 // connecter en série

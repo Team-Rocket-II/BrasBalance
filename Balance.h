@@ -3,6 +3,6 @@
 
 void Initialise_PortUART(void);
 void Initialise_CAN(void);
-void LirePoids(void);
+int LirePoids(void);
 
 #endif
