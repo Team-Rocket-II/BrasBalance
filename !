@@ -241,9 +241,7 @@ void *thread_capteur(void *arg) {
 	
 // Attente du signal de démarrage
     pthread_mutex_lock(&mutex_start);
-   // while (!start_threads) {
-     //   pthread_cond_wait(&cond_start, &mutex_start);
-    //}
+    
     while (system_state != RUNNING && !stop_threads && !stop_non_can_threads) {
         pthread_cond_wait(&cond_start, &mutex_start); // Attente de passage à "RUNNING"
     }
@@ -358,32 +356,31 @@ void *thread_bras(void *arg) {
 			    float distance = distance_mesuree;
 			    pthread_mutex_unlock(&mutex_distance);
 		
-			    if (distance >= 0 && distance <= 6.50) { 
+			    if (distance >= 0 && distance <= 6.50) {
 		    
-				    if (thisProg == 1){ // partie de programme non executé car non fonctionnel à 100%
+				    if (thisProg == 1){ // Partie de programme à mettre à jour mais non executer
+					    		// car non fonctionnel à 100%. Partie fonctionnel dans le 'else'state
 
 					    float coord_x, coord_y, coord_z;
 				
 					    printf("Bras: Objet détecté à %.2f mm, arrêt du mouvement.\n", distance);
 				    
-					    if(i == 1 || i == 5) { i -= 1;} else if (i == 2){i += 1;} // quand l'objet détecté, on revient un step en arrière 
+					    if(i == 1 || i == 5) { i -= 1;} else if (i == 2){i += 1;} 
 				    
 					    send_gcode(serial_port,"#25 G2203");
 					    usleep(2000000);
                    
 					    send_gcode(serial_port, positions[i]);
-					    usleep(2000000);
+					    usleep(2000000)
 		
 					    sscanf(positions[i], "#25 G0 X%f Y%f Z%f F5000", &coord_x, &coord_y, &coord_z);
 				    
-					    coord_x += 60;// Avance de 60 mm sur X
+					    coord_x += 60;// Avance de 10 mm sur X
 				    
 					    tcflush(serial_port, TCIFLUSH);  // Purge des tampons d'entrée avant lecture
 				    
-					    // Génération de la commande ajustée
-					    char command[100];
 				    
-					    while(1){ // Boucle de détection affiné en zigzag
+					    while(1){
 				    
 						    pump_off(serial_port);
 						    usleep(2000000);
@@ -412,7 +409,7 @@ void *thread_bras(void *arg) {
 							    send_gcode(serial_port, command); // Envoi de la commande ajustée
 							    usleep(2000000);
 			
-							    coord_x += 15;// Avance de 15 mm sur X
+							    coord_x += 15;// Avance de 10 mm sur X
 					
 							    tcflush(serial_port, TCIFLUSH); // Purge des données d'entrée avant lecture
 				    
@@ -434,9 +431,9 @@ void *thread_bras(void *arg) {
 					    send_gcode(serial_port, command); // Envoi de la commande ajustée
 					    usleep(2000000);
 				    
-				    }else{  // Partie de programme utilisé 
-					    // lorsque l'objet est détecté, on le pousse dans un coin 
-					    // où la coordonnée est connu afin de le récupérer à tous les coups 
+				    }else{  // Partie du programme exécuté 
+					    // Une fois que l'objet est détecté 
+					    // on le positionne à un emplacement précis afin d'aller le récuper
 					    
 					    printf("Bras: Objet détecté à %.2f mm, arrêt du mouvement.\n", distance);
                                         
@@ -454,7 +451,7 @@ void *thread_bras(void *arg) {
 						    for(int u = 4; u <= 7; u++){
 							    send_gcode(serial_port, Pousse[u]);
 							    usleep(2000000);
-						    }
+					 	    }
 					    }
 
 					    for(int j = 0; j <= 3; j++){
@@ -474,14 +471,15 @@ void *thread_bras(void *arg) {
 					    usleep(2000000);
 				    }
 
+				    
 				    send_gcode(serial_port, "#25 G0 X165 Y-10 Z150 F10000");
 				    usleep(2000000);
                     
 				    send_gcode(serial_port, "#25 G0 X15 Y285 Z150 F10000");
 				    usleep(2000000);
 				    
-				    if(BlockColor != ORANGE){ // pathern si l'objet est métallique
-				    		              // on le dépose sur la balance pour une pesée
+				    if(BlockColor != ORANGE){ // Pathern du bras si le block est métalique
+
 					    send_gcode(serial_port, "#25 G0 X15 Y285 Z105 F10000");
 					    usleep(2000000);
 				    
@@ -490,8 +488,8 @@ void *thread_bras(void *arg) {
 				    
 					    send_gcode(serial_port, "#25 G0 X15 Y285 Z150 F10000");
 					    usleep(2000000);
-					    
-					    while(LirePoids() == 0);					    
+					   
+					    while(LirePoids() == 0){}					    
 
 					    send_gcode(serial_port, "#25 G0 X15 Y285 Z105 F10000");
 					    usleep(2000000);
@@ -500,16 +498,16 @@ void *thread_bras(void *arg) {
 					    usleep(2000000);
 					
 				            send_gcode(serial_port, "#25 G0 X15 Y285 Z150 F10000");
-				            usleep(2000000); 
+					    usleep(2000000); 
 					
 				            send_gcode(serial_port, "#25 G0 X15 Y145 Z140 F10000");
-					    usleep(2000000);
+				            usleep(2000000);
                     
 				            send_gcode(serial_port, "#25 G0 X15 Y145 Z55 F10000");
 				            usleep(2000000);
 						
-				   } else { // pathern si le block est orange, on ne le dépose ps sur la balance
-						
+				    } else { // Pathern du bras si le block est orange
+					
 					    send_gcode(serial_port, "#25 G0 X15 Y285 Z150 F10000");
 				            usleep(2000000); 
 					
@@ -518,7 +516,7 @@ void *thread_bras(void *arg) {
                     
 				            send_gcode(serial_port, "#25 G0 X15 Y125 Z55 F10000");
 				            usleep(2000000);
-				   }
+					}
 		    
 				    pump_off(serial_port);
 				    usleep(2000000);
@@ -526,8 +524,8 @@ void *thread_bras(void *arg) {
 				    send_gcode(serial_port, positions[0]);
 				    usleep(2000000);
 					
-				    flagfin = 1;
-				    break; // Arrête la surveillance et le mouvement
+					flagfin = 1;
+					break; // Arrête la surveillance et le mouvement
 			    }
 				
 				if(flagfin == 1) { break;} 
@@ -542,7 +540,7 @@ void *thread_bras(void *arg) {
 				stop_non_can_threads = 1;
 				pthread_mutex_unlock(&mutex_distance);
                 break;
-	      	}
+	    }
             
             pthread_mutex_unlock(&mutex_distance);
 

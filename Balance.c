@@ -11,6 +11,9 @@
  * use "man termios" to get more info about  termios structure 
  * @author  Alexandre Dionne
  * @date    2024-10-07
+ * 
+ * @author  Malbrouck Harold
+ * @date    modifier le 2024-12-09
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -28,12 +31,17 @@
 #include <string.h>
 
 // device port série à utiliser 
-#define USB_BALANCE_PATH "dev/serial/by-id/ usb-FTDI_USB__-__Serial-if00-port0"
+#define USB_BALANCE_PATH "dev/serial/by-id/usb-FTDI_USB__-__Serial-if00-port0"  // ã changer en conséquence. Commande à faire dans votre
+                                                                                 // terminal préferer : ls /dev/serial/by-id/
+																				 
 #define CAN_INTERFACE "can0"  // interface CAN
+
+#define DECHARGÉ 0x82
+#define CAN_ID_USINE 0x034
 
 const char *portTTY = USB_BALANCE_PATH;
 
-    struct can_frame frame;
+struct can_frame frame;
 int can_socket;
 int fdp; // File Descriptor
 
@@ -120,20 +128,19 @@ void _main(void)
     printf("Début du programme\n");
 
 	Initialise_PortUART();
- 	 Initialise_CAN();       // Initialiser le CAN
-
-    //LirePortSerie();
-
-    LirePoids();
+ 	Initialise_CAN();       // Initialiser le CAN
+   
 	printf("Erreur, veuillez redémmarer\n");
 }
 
-//void LirePortSerie(void)
-  void LirePoids(void)
+//*********************************************************************
+void LirePoids(void)
+//*********************************************************************
+// Fonction qui permet de lire et récupérer le poids sur une balance 
+// connecter en série
+// On retourne l'information par communictaion CAN
+//*********************************************************************
 {
-
-	Initialise_PortUART();
- 	 Initialise_CAN();       // Initialiser le CAN
     char read_buffer[64]; // Tampon pour stocker les données reçues
     int nbytes;
     
@@ -141,7 +148,8 @@ void _main(void)
             nbytes = read(fdp, read_buffer, sizeof(read_buffer));
         if (nbytes < 0) {
             perror("Erreur de lecture");
-            exit(EXIT_FAILURE);
+            close(fdp); // Fermer le port série
+            return 0; // Retourner 0 en cas d'erreur
         }
 
         read_buffer[nbytes] = '\0'; // Ajouter le caractère de fin de chaîne
@@ -150,8 +158,14 @@ void _main(void)
             ucPoid = (10*(read_buffer[9] - 0x30)) ;
             ucPoid = (ucPoid + (read_buffer[10] - 0x30));   
             printf("%u \n",ucPoid);
-        }
+        } else {
+			close(fdp); // Fermer le port série
+            return 0; // Retourner 0 si le format est incorrect
+		}
         
+		//******************MESSAGE CAN**********************************************
+		// @author MALBROUCK HAROLD
+		//***************************************************************************
             // Préparer le message CAN
             frame.can_id = 0x031; // Identifiant du message CAN
             frame.can_dlc = 1;    // Taille des données (1 octet)
@@ -160,13 +174,15 @@ void _main(void)
             // Envoyer le message CAN
             if (write(can_socket, &frame, sizeof(frame)) != sizeof(frame)) {
                 perror("Erreur lors de l'envoi du message CAN");
+				close(fdp); // Fermer le port série
+                return 0; // Retourner 0 en cas d'échec d'envoi
             } else {
                 printf("Message CAN envoyé : Poids = %u\n", ucPoid);
             }
 
-	    frame.can_id = 0x34;
+	    frame.can_id = CAN_ID_USINE;
 	    frame.can_dlc = 3;
-	    frame.data[2] = 0x82;
+	    frame.data[2] = DECHARGÉ;
 
 	    // Envoyer le message CAN
             if (write(can_socket, &frame, sizeof(frame)) != sizeof(frame)) {
@@ -175,7 +191,9 @@ void _main(void)
                 printf("Message CAN envoyé : Déchargé ");
             }
 
-    close(fdp); // Fermer le port série
+        close(fdp); // Fermer le port série	
+        return 1; // Retourner 1 si tout s'est bien passé
+		//*********************************************************************************
 }
 
 
